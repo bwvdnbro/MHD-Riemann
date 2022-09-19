@@ -11,8 +11,9 @@ from riemannSolver import RiemannSolver
 # we assume an Einstein-de Sitter cosmology with
 #  H(a) = 1/a * da/dt = H_0 * a^(-3/2)
 a_begin = 0.001
-a_end = 0.002
+a_end = 0.0015
 H_0 = 100.0
+u_boost = 0.0
 
 
 def cosmology_get_dt_rescaled_from_da(a0, a1):
@@ -46,7 +47,7 @@ def cosmology_get_a_from_t(t):
 left_state = {
     "rho": 1.0,
     "p": 1.0,
-    "u": 0.0,
+    "u": u_boost,
     "v": 0.0,
     "w": 0.0,
     "Bx": 0.0,
@@ -56,7 +57,7 @@ left_state = {
 right_state = {
     "rho": 0.125,
     "p": 0.1,
-    "u": 0.0,
+    "u": u_boost,
     "v": 0.0,
     "w": 0.0,
     "Bx": 0.0,
@@ -103,6 +104,7 @@ riemann_problem = {
     "comoving": True,
     "a_from_t": cosmology_get_a_from_t,
     "comoving_term": cosmology_get_term_aX,
+    "H_0": H_0,
 }
 xs_MHD, solution_MHD = solve_MHD_Riemann_problem(riemann_problem, True)
 

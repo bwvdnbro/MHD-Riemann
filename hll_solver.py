@@ -285,6 +285,7 @@ def solve_MHD_Riemann_problem(riemann_problem_dict, verbose=True):
     if comoving:
         a_from_t = riemann_problem_dict["a_from_t"]
         comoving_term = riemann_problem_dict["comoving_term"]
+        H_0 = riemann_problem_dict["H_0"]
 
     # initialise state vectors
     states = np.zeros(Ncell, dtype=state_dtype)
@@ -296,9 +297,14 @@ def solve_MHD_Riemann_problem(riemann_problem_dict, verbose=True):
         prim = get_primitives(gamma, states)
         a = a_from_t(0.0)
         prim["rho"] /= a**3
-        prim["u"] = prim["u"] / a
-        prim["v"] = prim["v"] / a
-        prim["w"] = prim["w"] / a
+        prim["u"] /= a
+        prim["v"] /= a
+        prim["w"] /= a
+        """
+        prim["u"] -= H_0 * xs * a
+        prim["v"] -= H_0 * xs * a
+        prim["w"] -= H_0 * xs * a
+        """
         prim["p"] /= a ** (3 * gamma)
         prim["Bx"] /= a**2
         prim["By"] /= a**2
@@ -322,11 +328,17 @@ def solve_MHD_Riemann_problem(riemann_problem_dict, verbose=True):
         if comoving:
             # get the cell size at the current cosmological time
             a = a_from_t(istep * dt)
-            stepdx = dx / a
+            stepdx = dx * a
+            # use actual time rather than rescaled time for the integration
+            stepdt = dt * a**2
         else:
             stepdx = dx
+            stepdt = dt
 
         dtmax = 0.8 * stepdx / vmax
+        if comoving:
+            # convert the maximum dt to rescaled time
+            dtmax /= a**2
         if verbose:
             print(f"step {istep+1} out of {Nstep}, dtmax: {dtmax}", end="\r")
         if dtmax < dt:
@@ -335,8 +347,8 @@ def solve_MHD_Riemann_problem(riemann_problem_dict, verbose=True):
 
         stateview = states.view(np.float64).reshape((*states.shape, -1))
         fluxview = flux.view(np.float64).reshape((*flux.shape, -1))
-        stateview[1:-1] += (dt / stepdx) * fluxview[:-1]
-        stateview[1:-1] -= (dt / stepdx) * fluxview[1:]
+        stateview[1:-1] += (stepdt / stepdx) * fluxview[:-1]
+        stateview[1:-1] -= (stepdt / stepdx) * fluxview[1:]
 
         if comoving:
             # add cosmological expansion terms
@@ -345,6 +357,9 @@ def solve_MHD_Riemann_problem(riemann_problem_dict, verbose=True):
             prim = get_primitives(gamma, states)
             prim["rho"] *= 1.0 + dt * comoving_term(a, 3)
             prim["u"] *= 1.0 + dt * comoving_term(a, 1)
+            """
+            prim["u"] -= H_0 * stepdx
+            """
             prim["v"] *= 1.0 + dt * comoving_term(a, 1)
             prim["w"] *= 1.0 + dt * comoving_term(a, 1)
             prim["p"] *= 1.0 + dt * comoving_term(a, 3 * gamma)
@@ -361,9 +376,14 @@ def solve_MHD_Riemann_problem(riemann_problem_dict, verbose=True):
         # convert back to co-moving variables
         a = a_from_t(Nstep * dt)
         primitives["rho"] *= a**3
-        primitives["u"] = primitives["u"] * a
-        primitives["v"] = primitives["v"] * a
-        primitives["w"] = primitives["w"] * a
+        primitives["u"] *= a
+        primitives["v"] *= a
+        primitives["w"] *= a
+        """
+        primitives["u"] += H_0 * xs * a
+        primitives["v"] += H_0 * xs * a
+        primitives["w"] += H_0 * xs * a
+        """
         primitives["p"] *= a ** (3 * gamma)
         primitives["Bx"] *= a**2
         primitives["By"] *= a**2
