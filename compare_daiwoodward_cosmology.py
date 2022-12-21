@@ -105,6 +105,7 @@ riemann_problem = {
     "comoving": True,
     "a_from_t": cosmology_get_a_from_t,
     "comoving_term": cosmology_get_term_aX,
+    "H_0": H_0,
 }
 xs_MHD, solution_MHD = solve_MHD_Riemann_problem(riemann_problem, True)
 
